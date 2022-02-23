@@ -38,23 +38,26 @@ function getShortName(file: string, root: string) {
   return file.startsWith(root + '/') ? path.posix.relative(root, file) : file
 }
 
+// 热更新函数
 export async function handleHMRUpdate(
   file: string,
   server: ViteDevServer
 ): Promise<any> {
-  const { ws, config, moduleGraph } = server
-  const shortFile = getShortName(file, config.root)
+  const { ws, config, moduleGraph } = server // 获取到配置和socket实例
+  const shortFile = getShortName(file, config.root) // 根据项目根目录，拼接文件地址
 
-  const isConfig = file === config.configFile
+  const isConfig = file === config.configFile // 校验是否为配置文件
   const isConfigDependency = config.configFileDependencies.some(
     (name) => file === path.resolve(name)
   )
   const isEnv =
     config.inlineConfig.envFile !== false &&
     (file === '.env' || file.startsWith('.env.'))
+
+  // 如果有配置文件的修改 或者 包含环境变量的文件修改 或者 Dependency中的依赖项有修改，则重新启动服务， 否则，只更新对应的内容
   if (isConfig || isConfigDependency || isEnv) {
     // auto restart server
-    debugHmr(`[config change] ${colors.dim(shortFile)}`)
+    debugHmr(`[config change] ${colors.dim(shortFile)}`) // 打印日志
     config.logger.info(
       colors.green(
         `${path.relative(process.cwd(), file)} changed, restarting server...`
@@ -121,6 +124,7 @@ export async function handleHMRUpdate(
     return
   }
 
+  // 真正更新module的地方
   updateModules(shortFile, hmrContext.modules, timestamp, server)
 }
 
@@ -169,6 +173,8 @@ function updateModules(
       type: 'full-reload'
     })
   } else {
+
+    // 当出现更新时，可以看到控制台打印出来的hmr update + 文件路径
     config.logger.info(
       updates
         .map(({ path }) => colors.green(`hmr update `) + colors.dim(path))
@@ -434,7 +440,7 @@ export function lexAcceptedHmrDeps(
 function error(pos: number) {
   const err = new Error(
     `import.meta.accept() can only accept string literals or an ` +
-      `Array of string literals.`
+    `Array of string literals.`
   ) as RollupError
   err.pos = pos
   throw err

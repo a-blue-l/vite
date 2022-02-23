@@ -285,8 +285,8 @@ export interface ViteDevServer {
    * @internal
    */
   _registerMissingImport:
-    | ((id: string, resolved: string, ssr: boolean | undefined) => void)
-    | null
+  | ((id: string, resolved: string, ssr: boolean | undefined) => void)
+  | null
   /**
    * @internal
    */
@@ -297,28 +297,36 @@ export interface ViteDevServer {
   _pendingRequests: Map<string, Promise<TransformResult | null>>
 }
 
+// 创建一个服务
 export async function createServer(
   inlineConfig: InlineConfig = {}
 ): Promise<ViteDevServer> {
+  // 获取配置对象
   const config = await resolveConfig(inlineConfig, 'serve', 'development')
-  const root = config.root
-  const serverConfig = config.server
+  const root = config.root // 获取项目根路径
+  const serverConfig = config.server // 获取配置中关于serve的部分
+  // 解析出是否启用http2 和 缓存文件的目录
   const httpsOptions = await resolveHttpsConfig(
     config.server.https,
     config.cacheDir
   )
-  let { middlewareMode } = serverConfig
+  let { middlewareMode } = serverConfig // 获取serve配置中的中间件
   if (middlewareMode === true) {
-    middlewareMode = 'ssr'
+    middlewareMode = 'ssr' // 当存在中间件，默认为ssr
   }
 
-  const middlewares = connect() as Connect.Server
+  const middlewares = connect() as Connect.Server // connect ？？？
   const httpServer = middlewareMode
     ? null
     : await resolveHttpServer(serverConfig, middlewares, httpsOptions)
+
+  //  通过http配置，创建websocket链接
   const ws = createWebSocketServer(httpServer, config, httpsOptions)
 
+  // 获取watch底层配置项
   const { ignored = [], ...watchOptions } = serverConfig.watch || {}
+
+  // chokidar 监听文件变化插件，并排除掉node_modules等文件以及配置项中的ignored集合
   const watcher = chokidar.watch(path.resolve(root), {
     ignored: [
       '**/node_modules/**',
@@ -335,25 +343,28 @@ export async function createServer(
     container.resolveId(url, undefined, { ssr })
   )
 
+  // ？？？
   const container = await createPluginContainer(config, moduleGraph, watcher)
+
+  // 监听serve中的socket链接，并保存清洗函数（消除所有的链接）
   const closeHttpServer = createServerCloseFn(httpServer)
 
   // eslint-disable-next-line prefer-const
   let exitProcess: () => void
 
   const server: ViteDevServer = {
-    config,
-    middlewares,
-    get app() {
+    config, // 配置项
+    middlewares, // 中间件
+    get app() { // 获取中间件
       config.logger.warn(
         `ViteDevServer.app is deprecated. Use ViteDevServer.middlewares instead.`
       )
       return middlewares
     },
-    httpServer,
-    watcher,
+    httpServer, // http配置项
+    watcher, // 监听文件变化实例
     pluginContainer: container,
-    ws,
+    ws, // socket实例
     moduleGraph,
     ssrTransform,
     transformWithEsbuild,
@@ -376,6 +387,8 @@ export async function createServer(
         rebindErrorStacktrace(e, stacktrace)
       }
     },
+    // 启动serve
+    // port 端口
     listen(port?: number, isRestart?: boolean) {
       return startServer(server, port, isRestart)
     },
@@ -400,6 +413,8 @@ export async function createServer(
         throw new Error('cannot print server URLs in middleware mode.')
       }
     },
+
+    // 更新函数，用来触发热更新
     async restart(forceOptimize: boolean) {
       if (!server._restartPromise) {
         server._forceOptimizeOnRestart = !!forceOptimize
@@ -447,17 +462,23 @@ export async function createServer(
     return setPackageData(id, pkg)
   }
 
+  // 文件有改动时
   watcher.on('change', async (file) => {
-    file = normalizePath(file)
+    file = normalizePath(file) // 获取文件路径
     if (file.endsWith('/package.json')) {
       return invalidatePackageData(packageCache, file)
     }
     // invalidate module graph cache on file change
+    // 缓存文件
     moduleGraph.onFileChange(file)
+
+    // 如果开启了热更新
     if (serverConfig.hmr !== false) {
       try {
+        // 执行热更新函数
         await handleHMRUpdate(file, server)
       } catch (err) {
+        // 报错
         ws.send({
           type: 'error',
           err: prepareError(err)
@@ -656,9 +677,10 @@ async function startServer(
   return server
 }
 
+// 创建一个serve，并将所有链接加入集合，返回关闭集合中所有链接的函数
 function createServerCloseFn(server: http.Server | null) {
   if (!server) {
-    return () => {}
+    return () => { }
   }
 
   let hasListened = false
@@ -727,15 +749,18 @@ export function resolveServerOptions(
   return server
 }
 
+// 更新服务
 async function restartServer(server: ViteDevServer) {
   // @ts-ignore
   global.__vite_start_time = performance.now()
   const { port: prevPort, host: prevHost } = server.config.server
 
+  // 关闭当前服务
   await server.close()
 
   let newServer = null
   try {
+    // 重新创建一个新的服务
     newServer = await createServer(server.config.inlineConfig)
   } catch (err: any) {
     server.config.logger.error(err.message, {

@@ -39,6 +39,7 @@ export class ModuleNode {
   }
 }
 
+// 递归处理文件，直到所有文件全部添加到seen中为止
 function invalidateSSRModule(mod: ModuleNode, seen: Set<ModuleNode>) {
   if (seen.has(mod)) {
     return
@@ -66,7 +67,7 @@ export class ModuleGraph {
       url: string,
       ssr: boolean
     ) => Promise<PartialResolvedId | null>
-  ) {}
+  ) { }
 
   async getModuleByUrl(
     rawUrl: string,
@@ -84,11 +85,13 @@ export class ModuleGraph {
     return this.fileToModulesMap.get(file)
   }
 
+  // 执行文件修改
   onFileChange(file: string): void {
-    const mods = this.getModulesByFile(file)
+    const mods = this.getModulesByFile(file) // 获取到文件路径
     if (mods) {
       const seen = new Set<ModuleNode>()
       mods.forEach((mod) => {
+        // 遍历所有文件，执行invalidateModule，移步下一个函数
         this.invalidateModule(mod, seen)
       })
     }
@@ -139,7 +142,7 @@ export class ModuleGraph {
         dep.importers.delete(mod)
         if (!dep.importers.size) {
           // dependency no longer imported
-          ;(noLongerImported || (noLongerImported = new Set())).add(dep)
+          ; (noLongerImported || (noLongerImported = new Set())).add(dep)
         }
       }
     })
