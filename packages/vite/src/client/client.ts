@@ -227,7 +227,7 @@ async function waitForSuccessfulPing(ms = 1000) {
   }
 }
 
-// ping server
+// ping server 监听socket关闭
 socket.addEventListener('close', async ({ wasClean }) => {
   if (wasClean) return
   console.log(`[vite] server connection lost. polling for restart...`)
