@@ -16,7 +16,10 @@ const directRequestRE = /(\?|&)direct\b/
 /**
  * Vite-specific HMR handling
  */
+// 热更新要执行的更新函数
 export async function handleHotUpdate(
+  // file 更新的文件
+  // modules 更新文件中的模块集合
   { file, modules, read, server }: HmrContext,
   options: ResolvedOptions
 ): Promise<ModuleNode[] | void> {

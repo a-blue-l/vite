@@ -85,7 +85,7 @@ export class ModuleGraph {
     return this.fileToModulesMap.get(file)
   }
 
-  // 执行文件修改
+  // 文件修改回调
   onFileChange(file: string): void {
     const mods = this.getModulesByFile(file) // 获取到文件路径
     if (mods) {

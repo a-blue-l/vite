@@ -96,7 +96,10 @@ export async function handleHMRUpdate(
   }
 
   for (const plugin of config.plugins) {
+    // 如果使用了vueplugin插件，则里面会提供一个handleHotUpdate热更新函数，用来更新对应的组件
+    // 将需要修改的文件传入更新函数，移步 plugin-vue/src/handleHotUpdate
     if (plugin.handleHotUpdate) {
+      // 此处会收集到所有需要更新的模块，这个模块是与vue组件绑定之后的模块，可以做到针对性的更新
       const filteredModules = await plugin.handleHotUpdate(hmrContext)
       if (filteredModules) {
         hmrContext.modules = filteredModules
@@ -139,6 +142,7 @@ function updateModules(
   let needFullReload = false
 
   for (const mod of modules) {
+    // 格式化模块对象，全部添加到invalidatedModules中
     invalidate(mod, timestamp, invalidatedModules)
     if (needFullReload) {
       continue
@@ -173,7 +177,6 @@ function updateModules(
       type: 'full-reload'
     })
   } else {
-
     // 当出现更新时，可以看到控制台打印出来的hmr update + 文件路径
     config.logger.info(
       updates
@@ -181,6 +184,8 @@ function updateModules(
         .join('\n'),
       { clear: true, timestamp: true }
     )
+    // 真正触发页面刷新的地方，移步client / client message -> update
+    // 通知socket，有页面更新
     ws.send({
       type: 'update',
       updates

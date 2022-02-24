@@ -34,8 +34,8 @@ function warnFailedFetch(err: Error, path: string | string[]) {
   }
   console.error(
     `[hmr] Failed to reload ${path}. ` +
-      `This could be due to syntax errors or importing non-existent ` +
-      `modules. (see errors above)`
+    `This could be due to syntax errors or importing non-existent ` +
+    `modules. (see errors above)`
   )
 }
 
@@ -60,6 +60,8 @@ async function handleMessage(payload: HMRPayload) {
       // so send ping package let ws keep alive.
       setInterval(() => socket.send('ping'), __HMR_TIMEOUT__)
       break
+
+    // 真正触发页面刷新的函数
     case 'update':
       notifyListeners('vite:beforeUpdate', payload)
       // if this is the first update and there's already an error overlay, it
@@ -73,6 +75,8 @@ async function handleMessage(payload: HMRPayload) {
         clearErrorOverlay()
         isFirstUpdate = false
       }
+
+      // 将所有需要更新的模块遍历更新
       payload.updates.forEach((update) => {
         if (update.type === 'js-update') {
           queueUpdate(fetchUpdate(update))
@@ -88,9 +92,8 @@ async function handleMessage(payload: HMRPayload) {
             document.querySelectorAll<HTMLLinkElement>('link')
           ).find((e) => cleanUrl(e.href).includes(searchUrl))
           if (el) {
-            const newPath = `${base}${searchUrl.slice(1)}${
-              searchUrl.includes('?') ? '&' : '?'
-            }t=${timestamp}`
+            const newPath = `${base}${searchUrl.slice(1)}${searchUrl.includes('?') ? '&' : '?'
+              }t=${timestamp}`
             el.href = new URL(newPath, el.href).href
           }
           console.log(`[vite] css hot updated: ${searchUrl}`)
@@ -198,15 +201,17 @@ let queued: Promise<(() => void) | undefined>[] = []
  * so that they are invoked in the same order they were sent.
  * (otherwise the order may be inconsistent because of the http request round trip)
  */
+// 更新队列，每次执行，将当前更新队列中的所有更新函数一次性执行
 async function queueUpdate(p: Promise<(() => void) | undefined>) {
   queued.push(p)
   if (!pending) {
     pending = true
+    // 为什么需要等待一个promise任务的时间，当目前有宏任务执行的时候，需要在微任务队列中排队
     await Promise.resolve()
     pending = false
     const loading = [...queued]
     queued = []
-    ;(await Promise.all(loading)).forEach((fn) => fn && fn())
+      ; (await Promise.all(loading)).forEach((fn) => fn && fn())
   }
 }
 
@@ -334,8 +339,8 @@ async function fetchUpdate({ path, acceptedPath, timestamp }: Update) {
         const newMod = await import(
           /* @vite-ignore */
           base +
-            path.slice(1) +
-            `?import&t=${timestamp}${query ? `&${query}` : ''}`
+          path.slice(1) +
+          `?import&t=${timestamp}${query ? `&${query}` : ''}`
         )
         moduleMap.set(dep, newMod)
       } catch (e) {
@@ -405,7 +410,7 @@ export const createHotContext = (ownerPath: string) => {
   const newListeners = new Map()
   ctxToListenersMap.set(ownerPath, newListeners)
 
-  function acceptDeps(deps: string[], callback: HotCallback['fn'] = () => {}) {
+  function acceptDeps(deps: string[], callback: HotCallback['fn'] = () => { }) {
     const mod: HotModule = hotModulesMap.get(ownerPath) || {
       id: ownerPath,
       callbacks: []
@@ -439,7 +444,7 @@ export const createHotContext = (ownerPath: string) => {
     acceptDeps() {
       throw new Error(
         `hot.acceptDeps() is deprecated. ` +
-          `Use hot.accept() with the same signature instead.`
+        `Use hot.accept() with the same signature instead.`
       )
     },
 
@@ -453,7 +458,7 @@ export const createHotContext = (ownerPath: string) => {
 
     // TODO
     // eslint-disable-next-line @typescript-eslint/no-empty-function
-    decline() {},
+    decline() { },
 
     invalidate() {
       // TODO should tell the server to re-perform hmr propagation
@@ -489,9 +494,8 @@ export function injectQuery(url: string, queryToInject: string): string {
   const pathname = url.replace(/#.*$/, '').replace(/\?.*$/, '')
   const { search, hash } = new URL(url, 'http://vitejs.dev')
 
-  return `${pathname}?${queryToInject}${search ? `&` + search.slice(1) : ''}${
-    hash || ''
-  }`
+  return `${pathname}?${queryToInject}${search ? `&` + search.slice(1) : ''}${hash || ''
+    }`
 }
 
 export { ErrorOverlay }
