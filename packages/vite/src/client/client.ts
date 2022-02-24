@@ -297,6 +297,7 @@ export function removeStyle(id: string): void {
   }
 }
 
+// 处理要更新的所有updates 从 hmr 中传入过来的参数 *********
 async function fetchUpdate({ path, acceptedPath, timestamp }: Update) {
   const mod = hotModulesMap.get(path)
   if (!mod) {
@@ -326,6 +327,7 @@ async function fetchUpdate({ path, acceptedPath, timestamp }: Update) {
   }
 
   // determine the qualified callbacks before we re-import the modules
+  // 筛选出mod的callbacks中需要更新的函数
   const qualifiedCallbacks = mod.callbacks.filter(({ deps }) => {
     return deps.some((dep) => modulesToUpdate.has(dep))
   })
@@ -349,6 +351,7 @@ async function fetchUpdate({ path, acceptedPath, timestamp }: Update) {
     })
   )
 
+  // 返回的函数就是每一次queueUpdate添加的队列中的函数
   return () => {
     for (const { deps, fn } of qualifiedCallbacks) {
       fn(deps.map((dep) => moduleMap.get(dep)))
@@ -419,6 +422,8 @@ export const createHotContext = (ownerPath: string) => {
       deps,
       fn: callback
     })
+
+    // hotModulesMap中保存着所有模块的更新函数，在需要触发的时候进行查询，并更新
     hotModulesMap.set(ownerPath, mod)
   }
 
@@ -428,8 +433,10 @@ export const createHotContext = (ownerPath: string) => {
     },
 
     accept(deps: any, callback?: any) {
+      // templates组件编译的时候，会使用此方法包裹一个组件的render函数
       if (typeof deps === 'function' || !deps) {
         // self-accept: hot.accept(() => {})
+        // 给某个文件设置callbacks， 接受一个文件列表
         acceptDeps([ownerPath], ([mod]) => deps && deps(mod))
       } else if (typeof deps === 'string') {
         // explicit deps
